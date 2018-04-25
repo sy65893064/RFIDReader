@@ -1,0 +1,234 @@
+
+// RFIDCardDlg.cpp : 实现文件
+//
+
+#include "stdafx.h"
+#include "RFIDCard.h"
+#include "RFIDCardDlg.h"
+#include "afxdialogex.h"
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#endif
+
+
+// CRFIDCardDlg 对话框
+
+
+
+CRFIDCardDlg::CRFIDCardDlg(CWnd* pParent /*=NULL*/)
+	: CDialogEx(IDD_RFIDCARD_DIALOG, pParent)
+    , m_portNum(0)
+    , m_curTab(0)
+    , m_strPortStat(_T(""))
+{
+	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+}
+
+void CRFIDCardDlg::DoDataExchange(CDataExchange* pDX)
+{
+    CDialogEx::DoDataExchange(pDX);
+    DDX_Text(pDX, IDC_PORT_EDIT, m_portNum);
+    DDV_MinMaxInt(pDX, m_portNum, 0, 10);
+    DDX_Control(pDX, IDC_TAB1, m_tabCtrl1);
+    DDX_Text(pDX, IDC_PORT_STAT, m_strPortStat);
+}
+
+BEGIN_MESSAGE_MAP(CRFIDCardDlg, CDialogEx)
+	ON_WM_PAINT()
+	ON_WM_QUERYDRAGICON()
+    ON_BN_CLICKED(IDC_OPEN_PORT, &CRFIDCardDlg::OnBnClickedOpenPort)
+    ON_NOTIFY(TCN_SELCHANGE, IDC_TAB1, &CRFIDCardDlg::OnTcnSelchangeTab1)
+END_MESSAGE_MAP()
+
+
+// CRFIDCardDlg 消息处理程序
+
+BOOL CRFIDCardDlg::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
+	//  执行此操作
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
+
+	// TODO: 在此添加额外的初始化代码
+    //为tabCtrl控件添加两个页面
+    m_tabCtrl1.InsertItem(0, _T("管理员"));
+    m_tabCtrl1.InsertItem(1, _T("用户"));
+    //创建两个对话框
+    m_dlgAdmin.Create(IDD_ADMIN_TAB, &m_tabCtrl1);
+    m_dlgUser.Create(IDD_USER_TAB, &m_tabCtrl1);
+    //在tabCtrl控件内部显示两个对话框
+    CRect rc;
+    m_tabCtrl1.GetClientRect(rc);
+    rc.top += 22;
+    rc.bottom -= 1;
+    rc.left += 1;
+    rc.right -= 1;
+    m_dlgAdmin.MoveWindow(&rc);
+    m_dlgUser.MoveWindow(&rc);
+
+    m_dlgAdmin.ShowWindow(SW_SHOW);
+    m_dlgUser.ShowWindow(SW_HIDE);
+
+	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+}
+
+// 如果向对话框添加最小化按钮，则需要下面的代码
+//  来绘制该图标。  对于使用文档/视图模型的 MFC 应用程序，
+//  这将由框架自动完成。
+
+void CRFIDCardDlg::OnPaint()
+{
+	if (IsIconic())
+	{
+		CPaintDC dc(this); // 用于绘制的设备上下文
+
+		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+
+		// 使图标在工作区矩形中居中
+		int cxIcon = GetSystemMetrics(SM_CXICON);
+		int cyIcon = GetSystemMetrics(SM_CYICON);
+		CRect rect;
+		GetClientRect(&rect);
+		int x = (rect.Width() - cxIcon + 1) / 2;
+		int y = (rect.Height() - cyIcon + 1) / 2;
+
+		// 绘制图标
+		dc.DrawIcon(x, y, m_hIcon);
+	}
+	else
+	{
+		CDialogEx::OnPaint();
+	}
+}
+
+//当用户拖动最小化窗口时系统调用此函数取得光标
+//显示。
+HCURSOR CRFIDCardDlg::OnQueryDragIcon()
+{
+	return static_cast<HCURSOR>(m_hIcon);
+}
+
+
+
+void CRFIDCardDlg::OnBnClickedOpenPort()
+{
+    UpdateData(TRUE);
+    CString strInfo;
+    if (m_serialPort.InitPort(m_portNum))
+    {
+        strInfo.LoadStringW(IDS_OPENPORTSUCCESS);
+        MessageBox(strInfo);
+    }
+    else
+    {
+        strInfo.LoadStringW(IDS_OPENPORTFAIL);
+        MessageBox(strInfo);
+    }
+    m_strPortStat = strInfo;
+    UpdateData(FALSE);
+}
+
+
+void CRFIDCardDlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+    // TODO: 在此添加控件通知处理程序代码
+    m_curTab = m_tabCtrl1.GetCurSel();
+    switch (m_curTab)
+    {
+    case 0:
+        m_dlgAdmin.ShowWindow(TRUE);
+        m_dlgUser.ShowWindow(FALSE);
+        break;
+    case 1:
+        m_dlgAdmin.ShowWindow(FALSE);
+        m_dlgUser.ShowWindow(TRUE);
+        break;
+    default:
+        MessageBox(_T("选择错误！"));
+        break;
+    }
+
+    *pResult = 0;
+}
+
+
+BOOL CRFIDCardDlg::PreTranslateMessage(MSG* pMsg)
+{
+    // TODO: 在此添加专用代码和/或调用基类
+    // enter键不会退出程序
+    if (pMsg->message == WM_KEYDOWN && pMsg->wParam == VK_RETURN)
+    {
+        return TRUE;
+    }
+
+    return CDialogEx::PreTranslateMessage(pMsg);
+}
+
+
+// 读取卡号
+CString CRFIDCardDlg::ReadCardNum()
+{
+    // 命令为获取卡号
+    UCHAR cmd[] = { 0x01, 0x08, 0xA1, 0x20, 0x00, 0x01, 0x00, 0x76 };
+    UCHAR ch = ' ';
+    CString strCardNum;
+
+    m_serialPort.WriteData(cmd, 8);
+    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
+
+    // 获取反回信息长度
+    int len = m_serialPort.GetBytesInCOM();
+    for (int i = 0; i < len; ++i)
+    {
+        if (true == m_serialPort.ReadChar(ch))
+        {
+            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
+        }
+    }
+
+    if (strCardNum.Left(10).MakeUpper() == _T("010CA12000"))
+    {
+        MessageBox(_T("读取卡号成功！"));
+        return strCardNum.Mid(12, 8);
+    }
+    else
+    {
+        MessageBox(_T("读取卡号失败！"));
+        return _T("");
+    }
+}
+
+
+void CRFIDCardDlg::SetAutoReadCardNum()
+{
+    // 包类型/包长度/返回命令/地址/状态/保留/校验和
+    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x02, 0x00, 0x00, 0x17 };
+    UCHAR ch = ' ';
+    CString strCardNum;
+
+    m_serialPort.WriteData(cmd, 8);
+    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
+
+    // 获取反回信息长度
+    int len = m_serialPort.GetBytesInCOM();
+    for (int i = 0; i < len; ++i)
+    {
+        if (true == m_serialPort.ReadChar(ch))
+        {
+            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
+        }
+    }
+
+    if (strCardNum.Left(10).MakeUpper() == _T("0308C12000"))
+    {
+        MessageBox(_T("现在工作模式为自动读卡模式！"));
+    }
+    else
+    {
+        MessageBox(_T("设置自动读卡模式失败，请使用按钮获取卡号！"));
+    }
+}
