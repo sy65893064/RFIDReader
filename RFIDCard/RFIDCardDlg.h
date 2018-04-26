@@ -39,6 +39,10 @@ private:
     CDlgAdmin m_dlgAdmin;
     CDlgUser m_dlgUser;
     virtual BOOL PreTranslateMessage(MSG* pMsg);
+    // 设置自动读卡
+    void SetAutoRead();
+    // 取消自动读卡
+    void CancelAutoRead();
 
 public:
     // 端口号
@@ -51,6 +55,6 @@ public:
     afx_msg void OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult);
     // 读取卡号
     CString ReadCardNum();
-    void SetAutoReadCardNum();
+    // 端口状态
     CString m_strPortStat;
 };

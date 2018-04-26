@@ -20,7 +20,7 @@ CRFIDCardDlg::CRFIDCardDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_RFIDCARD_DIALOG, pParent)
     , m_portNum(0)
     , m_curTab(0)
-    , m_strPortStat(_T(""))
+    , m_strPortStat(_T("请先打开端口后使用！"))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -70,7 +70,7 @@ BOOL CRFIDCardDlg::OnInitDialog()
     m_dlgAdmin.MoveWindow(&rc);
     m_dlgUser.MoveWindow(&rc);
 
-    m_dlgAdmin.ShowWindow(SW_SHOW);
+    m_dlgAdmin.ShowWindow(SW_HIDE);
     m_dlgUser.ShowWindow(SW_HIDE);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
@@ -122,6 +122,14 @@ void CRFIDCardDlg::OnBnClickedOpenPort()
     {
         strInfo.LoadStringW(IDS_OPENPORTSUCCESS);
         MessageBox(strInfo);
+
+        // 成功打开端口后设置子窗口可用
+        m_dlgAdmin.ShowWindow(TRUE);
+        m_dlgUser.ShowWindow(FALSE);
+        CancelAutoRead();
+
+        // 设置Tab控件可用
+        m_tabCtrl1.EnableWindow(TRUE);
     }
     else
     {
@@ -136,16 +144,26 @@ void CRFIDCardDlg::OnBnClickedOpenPort()
 void CRFIDCardDlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult)
 {
     // TODO: 在此添加控件通知处理程序代码
+    UpdateData(TRUE);
+    CString strPortStat;
+    strPortStat.LoadStringW(IDS_OPENPORTSUCCESS);
+    if (m_strPortStat != strPortStat) // 判断端口是否打开
+    {
+        return;
+    }
+
     m_curTab = m_tabCtrl1.GetCurSel();
     switch (m_curTab)
     {
     case 0:
         m_dlgAdmin.ShowWindow(TRUE);
         m_dlgUser.ShowWindow(FALSE);
+        CancelAutoRead(); // 管理员界面设置手动读卡
         break;
     case 1:
         m_dlgAdmin.ShowWindow(FALSE);
         m_dlgUser.ShowWindow(TRUE);
+        SetAutoRead(); // 用户界面设置自动读卡
         break;
     default:
         MessageBox(_T("选择错误！"));
@@ -203,7 +221,8 @@ CString CRFIDCardDlg::ReadCardNum()
 }
 
 
-void CRFIDCardDlg::SetAutoReadCardNum()
+// 设置自动读卡
+void CRFIDCardDlg::SetAutoRead()
 {
     // 包类型/包长度/返回命令/地址/状态/保留/校验和
     UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x02, 0x00, 0x00, 0x17 };
@@ -230,5 +249,37 @@ void CRFIDCardDlg::SetAutoReadCardNum()
     else
     {
         MessageBox(_T("设置自动读卡模式失败，请使用按钮获取卡号！"));
+    }
+}
+
+
+// 取消自动读卡
+void CRFIDCardDlg::CancelAutoRead()
+{
+    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x01, 0x00, 0x00, 0x14 };
+
+    UCHAR ch = ' ';
+    CString strCardNum;
+
+    m_serialPort.WriteData(cmd, 8);
+    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
+
+                // 获取反回信息长度
+    int len = m_serialPort.GetBytesInCOM();
+    for (int i = 0; i < len; ++i)
+    {
+        if (true == m_serialPort.ReadChar(ch))
+        {
+            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
+        }
+    }
+
+    if (strCardNum.Left(10).MakeUpper() == _T("0308C12000"))
+    {
+        MessageBox(_T("现在工作模式为手动读卡模式！"));
+    }
+    else
+    {
+        MessageBox(_T("设置手动读卡模式失败，请使用按钮获取卡号！"));
     }
 }
