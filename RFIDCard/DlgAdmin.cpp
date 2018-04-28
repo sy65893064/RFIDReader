@@ -33,6 +33,8 @@ void CDlgAdmin::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDlgAdmin, CDialog)
     ON_BN_CLICKED(IDC_CARD_NUM, &CDlgAdmin::OnBnClickedCardNum)
     ON_WM_PAINT()
+    ON_BN_CLICKED(IDC_AUTHORIZE, &CDlgAdmin::OnBnClickedAuthorize)
+    ON_BN_CLICKED(IDC_DEAUTHORIZE, &CDlgAdmin::OnBnClickedDeauthorize)
 END_MESSAGE_MAP()
 
 
@@ -43,14 +45,30 @@ void CDlgAdmin::OnBnClickedCardNum()
 {
     // TODO: 在此添加控件通知处理程序代码
     // 获取主窗口
-    CRFIDCardDlg* cwnd = (CRFIDCardDlg *)(/*this->GetParent()->GetParent()*/AfxGetMainWnd());
+    CRFIDCardDlg *cWnd = (CRFIDCardDlg *)(AfxGetMainWnd());
     CString strPortStat;
     strPortStat.LoadStringW(IDS_OPENPORTSUCCESS);
     // 判断端口是否正常打开
-    if (cwnd->m_strPortStat == strPortStat)
+    if (cWnd->m_strPortStat == strPortStat)
     {
         // 调取主窗口函数获取卡号
-        m_strCardNum = cwnd->ReadCardNum();
+        m_strCardNum = cWnd->ReadCardNum();
+
+        // 获取卡授权状态，并改变按钮显示状态
+        if (!m_strCardNum.IsEmpty())
+        {
+            if (cWnd->GetAuthorizeStat())
+            {
+                GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
+                GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(TRUE);
+            }
+            else
+            {
+                GetDlgItem(IDC_AUTHORIZE)->EnableWindow(TRUE);
+                GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
+            }
+        }
+
         UpdateData(FALSE);
     }
     else
@@ -68,4 +86,20 @@ void CDlgAdmin::OnPaint()
     GetClientRect(rect);
     dc.FillSolidRect(rect, RGB(255, 255, 255));
     CDialog::OnPaint();
+}
+
+
+void CDlgAdmin::OnBnClickedAuthorize()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
+    GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(TRUE);
+}
+
+
+void CDlgAdmin::OnBnClickedDeauthorize()
+{
+    // TODO: 在此添加控件通知处理程序代码
+    GetDlgItem(IDC_AUTHORIZE)->EnableWindow(TRUE);
+    GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
 }

@@ -23,4 +23,6 @@ public:
     afx_msg void OnBnClickedCardNum();
     CString m_strCardNum;
     afx_msg void OnPaint();
+    afx_msg void OnBnClickedAuthorize();
+    afx_msg void OnBnClickedDeauthorize();
 };

@@ -63,6 +63,10 @@ public:
     afx_msg void OnClose();
     // 读取卡号
     CString ReadCardNum();
+    // 获取权限状态
+    bool GetAuthorizeStat();
+    // 设置权限状态
+    void SetAuthorizeStat();
     // 端口状态
     CString m_strPortStat;
 };

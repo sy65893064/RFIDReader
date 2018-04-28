@@ -232,6 +232,29 @@ CString CRFIDCardDlg::ReadCardNum()
 }
 
 
+// 获取权限状态
+bool CRFIDCardDlg::GetAuthorizeStat()
+{
+    UCHAR cmd[] = { 0x01, 0x08, 0xA3, 0x20, 0x01, 0x00, 0x00, 0x00 };
+    CString strRecv;
+
+    if (SendAndRecv(cmd, strRecv))
+    {
+        if (strRecv.Mid(10, 32) == _T("11111111111111111111111111111111"))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+// 设置权限状态
+void CRFIDCardDlg::SetAuthorizeStat()
+{
+}
+
+
 // 设置自动读卡
 void CRFIDCardDlg::SetAutoRead()
 {
