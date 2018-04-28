@@ -28,7 +28,19 @@ void CDlgUser::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CDlgUser, CDialog)
+    ON_WM_PAINT()
 END_MESSAGE_MAP()
 
 
 // CDlgUser 消息处理程序
+
+
+void CDlgUser::OnPaint()
+{
+    CPaintDC dc(this);
+    // 修改窗口背景颜色
+    CRect rect;
+    GetClientRect(rect);
+    dc.FillSolidRect(rect, RGB(255, 255, 255));
+    CDialog::OnPaint();
+}

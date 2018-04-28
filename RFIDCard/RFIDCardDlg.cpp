@@ -63,10 +63,10 @@ BOOL CRFIDCardDlg::OnInitDialog()
     //在tabCtrl控件内部显示两个对话框
     CRect rc;
     m_tabCtrl1.GetClientRect(rc);
-    rc.top += 22;
-    rc.bottom -= 1;
-    rc.left += 1;
-    rc.right -= 1;
+    rc.top += 25;
+    rc.bottom -= 5;
+    rc.left += 5;
+    rc.right -= 5;
     m_dlgAdmin.MoveWindow(&rc);
     m_dlgUser.MoveWindow(&rc);
 
