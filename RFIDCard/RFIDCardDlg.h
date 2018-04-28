@@ -39,10 +39,17 @@ private:
     CDlgAdmin m_dlgAdmin;
     CDlgUser m_dlgUser;
     virtual BOOL PreTranslateMessage(MSG* pMsg);
+    // 计算校验位
+    void CheckSumOut(UCHAR *buf, UCHAR len);
     // 设置自动读卡
     void SetAutoRead();
     // 取消自动读卡
     void CancelAutoRead();
+    // 设置读卡器KayA KayB
+    void SetKayAB();
+    void SetDefaultKayAB();
+    // 发送cmd返回结果字符串
+    bool SendAndRecv(UCHAR cmd[], CString& strRecv);
 
 public:
     // 端口号
@@ -53,6 +60,7 @@ public:
 	// 生成的消息映射函数
     afx_msg void OnBnClickedOpenPort();
     afx_msg void OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult);
+    afx_msg void OnClose();
     // 读取卡号
     CString ReadCardNum();
     // 端口状态

@@ -39,6 +39,7 @@ BEGIN_MESSAGE_MAP(CRFIDCardDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
     ON_BN_CLICKED(IDC_OPEN_PORT, &CRFIDCardDlg::OnBnClickedOpenPort)
     ON_NOTIFY(TCN_SELCHANGE, IDC_TAB1, &CRFIDCardDlg::OnTcnSelchangeTab1)
+    ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -130,6 +131,8 @@ void CRFIDCardDlg::OnBnClickedOpenPort()
 
         // 设置Tab控件可用
         m_tabCtrl1.EnableWindow(TRUE);
+
+        SetKayAB();
     }
     else
     {
@@ -174,6 +177,15 @@ void CRFIDCardDlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult)
 }
 
 
+void CRFIDCardDlg::OnClose()
+{
+    // TODO: 在此添加消息处理程序代码和/或调用默认值
+    SetDefaultKayAB();
+
+    CDialogEx::OnClose();
+}
+
+
 BOOL CRFIDCardDlg::PreTranslateMessage(MSG* pMsg)
 {
     // TODO: 在此添加专用代码和/或调用基类
@@ -187,31 +199,30 @@ BOOL CRFIDCardDlg::PreTranslateMessage(MSG* pMsg)
 }
 
 
+// 计算校验位
+void CRFIDCardDlg::CheckSumOut(UCHAR *buf, UCHAR len)
+{
+    UCHAR i;
+    UCHAR checksum;
+    checksum = 0;
+    for (i = 0; i < (len - 1); i++)
+    {
+        checksum ^= buf[i];
+    }
+    buf[len - 1] = (UCHAR)~checksum;
+}
+
+
 // 读取卡号
 CString CRFIDCardDlg::ReadCardNum()
 {
-    // 命令为获取卡号
-    UCHAR cmd[] = { 0x01, 0x08, 0xA1, 0x20, 0x00, 0x01, 0x00, 0x76 };
-    UCHAR ch = ' ';
-    CString strCardNum;
+    UCHAR cmd[] = { 0x01, 0x08, 0xA1, 0x20, 0x00, 0x01, 0x00, 0x00 };
+    CString strRecv;
 
-    m_serialPort.WriteData(cmd, 8);
-    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
-
-    // 获取反回信息长度
-    int len = m_serialPort.GetBytesInCOM();
-    for (int i = 0; i < len; ++i)
-    {
-        if (true == m_serialPort.ReadChar(ch))
-        {
-            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
-        }
-    }
-
-    if (strCardNum.Left(10).MakeUpper() == _T("010CA12000"))
+    if (SendAndRecv(cmd, strRecv))
     {
         MessageBox(_T("读取卡号成功！"));
-        return strCardNum.Mid(12, 8);
+        return strRecv.Mid(12, 8);
     }
     else
     {
@@ -224,25 +235,10 @@ CString CRFIDCardDlg::ReadCardNum()
 // 设置自动读卡
 void CRFIDCardDlg::SetAutoRead()
 {
-    // 包类型/包长度/返回命令/地址/状态/保留/校验和
-    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x02, 0x00, 0x00, 0x17 };
-    UCHAR ch = ' ';
-    CString strCardNum;
+    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x02, 0x00, 0x00, 0x00 };
+    CString strRecv;
 
-    m_serialPort.WriteData(cmd, 8);
-    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
-
-    // 获取反回信息长度
-    int len = m_serialPort.GetBytesInCOM();
-    for (int i = 0; i < len; ++i)
-    {
-        if (true == m_serialPort.ReadChar(ch))
-        {
-            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
-        }
-    }
-
-    if (strCardNum.Left(10).MakeUpper() == _T("0308C12000"))
+    if (SendAndRecv(cmd, strRecv))
     {
         MessageBox(_T("现在工作模式为自动读卡模式！"));
     }
@@ -256,30 +252,99 @@ void CRFIDCardDlg::SetAutoRead()
 // 取消自动读卡
 void CRFIDCardDlg::CancelAutoRead()
 {
-    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x01, 0x00, 0x00, 0x14 };
+    UCHAR cmd[] = { 0x03, 0x08, 0xC1, 0x20, 0x01, 0x00, 0x00, 0x00 };
+    CString strRecv;
 
-    UCHAR ch = ' ';
-    CString strCardNum;
-
-    m_serialPort.WriteData(cmd, 8);
-    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
-
-                // 获取反回信息长度
-    int len = m_serialPort.GetBytesInCOM();
-    for (int i = 0; i < len; ++i)
-    {
-        if (true == m_serialPort.ReadChar(ch))
-        {
-            strCardNum.Format(_T("%s%02x"), strCardNum, ch);
-        }
-    }
-
-    if (strCardNum.Left(10).MakeUpper() == _T("0308C12000"))
+    if (SendAndRecv(cmd, strRecv))
     {
         MessageBox(_T("现在工作模式为手动读卡模式！"));
     }
     else
     {
         MessageBox(_T("设置手动读卡模式失败，请使用按钮获取卡号！"));
+    }
+}
+
+
+// 设置读卡器KayA KayB
+void CRFIDCardDlg::SetKayAB()
+{
+    // 设置KayA 111111111111
+    // 设置控制位 FF078069
+    // 设置KayB 222222222222
+    UCHAR cmd[] = { 0x03, 0x15, 0xC3, 0x20, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0xFF, 0x07, 0x80, 0x69, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x00 };
+    UCHAR ch = ' ';
+    CString strRecv;
+    if (SendAndRecv(cmd, strRecv))
+    {
+        MessageBox(_T("设置Kay成功！\n当前KayA为111111111111；\n当前KayB为222222222222。"));
+    }
+    else
+    {
+        MessageBox(_T("设置Kay失败！"));
+    }
+}
+
+
+void CRFIDCardDlg::SetDefaultKayAB()
+{
+    // 设置KayA FFFFFFFFFFFF
+    // 设置控制位 FF078069
+    // 设置KayB FFFFFFFFFFFF
+    UCHAR cmd[] = { 0x03, 0x15, 0xC3, 0x20, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
+    CString strRecv;
+#ifndef _DEBUG
+    SendAndRecv(cmd, strRecv);
+#else
+    if (SendAndRecv(cmd, strRecv))
+    {
+        MessageBox(_T("设置默认Kay成功！"));
+    }
+    else
+    {
+        MessageBox(_T("设置默认Kay失败！"));
+    }
+#endif
+}
+
+
+// 发送cmd返回结果字符串
+bool CRFIDCardDlg::SendAndRecv(UCHAR cmd[], CString& strRecv)
+{
+    UCHAR ch = ' ';
+    CString strCmd;
+
+    CheckSumOut(cmd, cmd[1]);
+    m_serialPort.WriteData(cmd, cmd[1]);
+    Sleep(200); // 等待0.2秒保证能够读取到正确的返回信息
+
+    // 获取返回信息
+    int len = m_serialPort.GetBytesInCOM();
+    for (int i = 0; i < len; ++i)
+    {
+        if (true == m_serialPort.ReadChar(ch))
+        {
+            strRecv.Format(_T("%s%02x"), strRecv, ch);
+        }
+    }
+
+    for (int i = 0; i < cmd[1]; ++i)
+    {
+        strCmd.Format(_T("%s%02X"), strCmd, cmd[i]);
+    }
+
+    strRecv.MakeUpper();
+    strCmd.MakeUpper();
+    if (strRecv.Mid(8, 2) == _T("00")
+        && strRecv.Left(2) == strCmd.Left(2)
+        && strRecv.Mid(4, 4) == strCmd.Mid(4, 4))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
