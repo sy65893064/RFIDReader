@@ -35,6 +35,7 @@ BEGIN_MESSAGE_MAP(CDlgAdmin, CDialog)
     ON_WM_PAINT()
     ON_BN_CLICKED(IDC_AUTHORIZE, &CDlgAdmin::OnBnClickedAuthorize)
     ON_BN_CLICKED(IDC_DEAUTHORIZE, &CDlgAdmin::OnBnClickedDeauthorize)
+    ON_WM_SHOWWINDOW()
 END_MESSAGE_MAP()
 
 
@@ -92,14 +93,35 @@ void CDlgAdmin::OnPaint()
 void CDlgAdmin::OnBnClickedAuthorize()
 {
     // TODO: 在此添加控件通知处理程序代码
-    GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
-    GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(TRUE);
+    if (((CRFIDCardDlg *)AfxGetMainWnd())->Authorize())
+    {
+        GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
+        GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(TRUE);
+    }
 }
 
 
 void CDlgAdmin::OnBnClickedDeauthorize()
 {
     // TODO: 在此添加控件通知处理程序代码
-    GetDlgItem(IDC_AUTHORIZE)->EnableWindow(TRUE);
-    GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
+    if (((CRFIDCardDlg *)AfxGetMainWnd())->Deauthorize())
+    {
+        GetDlgItem(IDC_AUTHORIZE)->EnableWindow(TRUE);
+        GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
+    }
+}
+
+
+void CDlgAdmin::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+    CDialog::OnShowWindow(bShow, nStatus);
+    if (bShow)
+    {
+        m_strCardNum = _T("");
+        GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
+        GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
+        UpdateData(FALSE);
+    }
+
+    // TODO: 在此处添加消息处理程序代码
 }

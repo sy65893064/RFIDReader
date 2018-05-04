@@ -50,6 +50,13 @@ private:
     void SetDefaultKayAB();
     // 发送cmd返回结果字符串
     bool SendAndRecv(UCHAR cmd[], CString& strRecv);
+    // 数据块1中写入全1或全0
+    bool WriteAllOneOrZero(int data);
+    // 修改原始密码全1或全F
+    bool ChangeOriginalKey(int key);
+    // 加密扇区0
+    bool encrypt();
+
 
 public:
     // 端口号
@@ -65,8 +72,12 @@ public:
     CString ReadCardNum();
     // 获取权限状态
     bool GetAuthorizeStat();
-    // 设置权限状态
-    void SetAuthorizeStat();
+    // 授权
+    bool Authorize();
+    // 取消授权
+    bool Deauthorize();
+    // 自动读卡号一次
+    void ReadCardOnce(CString& strCardNum);
     // 端口状态
     CString m_strPortStat;
 };

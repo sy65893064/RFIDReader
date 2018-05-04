@@ -25,4 +25,5 @@ public:
     afx_msg void OnPaint();
     afx_msg void OnBnClickedAuthorize();
     afx_msg void OnBnClickedDeauthorize();
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
 };

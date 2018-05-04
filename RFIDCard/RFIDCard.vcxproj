@@ -218,6 +218,8 @@
     <None Include="res\RFIDCard.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\GreenLight.bmp" />
+    <Image Include="res\RedLight.bmp" />
     <Image Include="res\RFIDCard.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

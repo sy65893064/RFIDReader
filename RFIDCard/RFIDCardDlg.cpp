@@ -131,8 +131,6 @@ void CRFIDCardDlg::OnBnClickedOpenPort()
 
         // 设置Tab控件可用
         m_tabCtrl1.EnableWindow(TRUE);
-
-        SetKayAB();
     }
     else
     {
@@ -162,11 +160,13 @@ void CRFIDCardDlg::OnTcnSelchangeTab1(NMHDR *pNMHDR, LRESULT *pResult)
         m_dlgAdmin.ShowWindow(TRUE);
         m_dlgUser.ShowWindow(FALSE);
         CancelAutoRead(); // 管理员界面设置手动读卡
+        m_dlgUser.KillTimer(TIMER_USER);
         break;
     case 1:
         m_dlgAdmin.ShowWindow(FALSE);
         m_dlgUser.ShowWindow(TRUE);
         SetAutoRead(); // 用户界面设置自动读卡
+        m_dlgUser.SetTimer(TIMER_USER, 500, NULL);
         break;
     default:
         MessageBox(_T("选择错误！"));
@@ -235,6 +235,7 @@ CString CRFIDCardDlg::ReadCardNum()
 // 获取权限状态
 bool CRFIDCardDlg::GetAuthorizeStat()
 {
+    SetKayAB();
     UCHAR cmd[] = { 0x01, 0x08, 0xA3, 0x20, 0x01, 0x00, 0x00, 0x00 };
     CString strRecv;
 
@@ -249,9 +250,59 @@ bool CRFIDCardDlg::GetAuthorizeStat()
 }
 
 
-// 设置权限状态
-void CRFIDCardDlg::SetAuthorizeStat()
+// 授权
+bool CRFIDCardDlg::Authorize()
 {
+    SetDefaultKayAB();
+    if (WriteAllOneOrZero(1) &&
+        ChangeOriginalKey(ALL_F))
+    {
+        SetKayAB();
+        if (encrypt())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 取消授权
+bool CRFIDCardDlg::Deauthorize()
+{
+    SetKayAB();
+    if (WriteAllOneOrZero(0) &&
+        ChangeOriginalKey(ALL_1))
+    {
+        SetDefaultKayAB();
+        if (encrypt())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 自动读卡号一次
+void CRFIDCardDlg::ReadCardOnce(CString& strCardNum)
+{
+    UCHAR ch = ' ';
+    CString strRecv;
+
+    // 获取返回信息
+    int len = m_serialPort.GetBytesInCOM();
+    for (int i = 0; i < len; ++i)
+    {
+        if (true == m_serialPort.ReadChar(ch))
+        {
+            strRecv.Format(_T("%s%02x"), strRecv, ch);
+        }
+    }
+
+    strRecv.MakeUpper();
+    if (strRecv.Left(14) == _T("040C0220000400"))
+    {
+        strCardNum = strRecv.Mid(14, 8);
+    }
 }
 
 
@@ -299,6 +350,7 @@ void CRFIDCardDlg::SetKayAB()
         0xFF, 0x07, 0x80, 0x69, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x00 };
     UCHAR ch = ' ';
     CString strRecv;
+#ifdef _DEBUG
     if (SendAndRecv(cmd, strRecv))
     {
         MessageBox(_T("设置Kay成功！\n当前KayA为111111111111；\n当前KayB为222222222222。"));
@@ -307,6 +359,9 @@ void CRFIDCardDlg::SetKayAB()
     {
         MessageBox(_T("设置Kay失败！"));
     }
+#else
+    SendAndRecv(cmd, strRecv);
+#endif
 }
 
 
@@ -363,6 +418,77 @@ bool CRFIDCardDlg::SendAndRecv(UCHAR cmd[], CString& strRecv)
     if (strRecv.Mid(8, 2) == _T("00")
         && strRecv.Left(2) == strCmd.Left(2)
         && strRecv.Mid(4, 4) == strCmd.Mid(4, 4))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool CRFIDCardDlg::WriteAllOneOrZero(int data)
+{
+    CString strRecv;
+
+    if (1 == data)
+    {
+        UCHAR cmd[] = { 0x01, 0x17, 0xA4, 0x20, 0x01, 0x01, 0x11, 0x11, 0x11, 0x11,
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x00 };
+        if (!SendAndRecv(cmd, strRecv))
+        {
+            return false;
+        }
+    }
+    else if (0 == data)
+    {
+        UCHAR cmd[] = { 0x01, 0x17, 0xA4, 0x20, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        if (!SendAndRecv(cmd, strRecv))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
+bool CRFIDCardDlg::ChangeOriginalKey(int key)
+{
+    CString strRecv;
+
+    if (key == ALL_1)
+    {
+        UCHAR cmd[] = { 0x03, 0x0B, 0xC4, 0x20, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x00 };
+        if (!SendAndRecv(cmd, strRecv))
+        {
+            return false;
+        }
+    }
+    else if (key == ALL_F)
+    {
+        UCHAR cmd[] = { 0x03, 0x0B, 0xC4, 0x20, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
+        if (!SendAndRecv(cmd, strRecv))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
+bool CRFIDCardDlg::encrypt()
+{
+    CString strRecv;
+
+    UCHAR cmd[] = { 0x01, 0x08, 0xA5, 0x20, 0x03, 0x01, 0x00, 0x71 };
+    if (SendAndRecv(cmd, strRecv))
     {
         return true;
     }

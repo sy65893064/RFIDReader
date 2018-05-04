@@ -1,4 +1,5 @@
 #pragma once
+#include "afxwin.h"
 
 
 // CDlgUser 对话框
@@ -20,6 +21,13 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
+private:
+    void ReadCard();
+
 public:
     afx_msg void OnPaint();
+    afx_msg void OnTimer(UINT_PTR nIDEvent);
+    CString m_strCardNum;
+    CStatic m_picCtrl;
+    CString m_strAuth;
 };

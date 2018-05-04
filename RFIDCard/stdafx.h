@@ -51,4 +51,8 @@
 #endif
 #endif
 
+#define TIMER_USER 11
+#define TIMER_PIC  12
 
+#define ALL_1 0x1
+#define ALL_F 0xF
