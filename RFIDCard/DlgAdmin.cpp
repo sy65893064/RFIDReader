@@ -97,6 +97,7 @@ void CDlgAdmin::OnBnClickedAuthorize()
     {
         GetDlgItem(IDC_AUTHORIZE)->EnableWindow(FALSE);
         GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(TRUE);
+        MessageBox(_T("授权成功！"));
     }
 }
 
@@ -108,6 +109,7 @@ void CDlgAdmin::OnBnClickedDeauthorize()
     {
         GetDlgItem(IDC_AUTHORIZE)->EnableWindow(TRUE);
         GetDlgItem(IDC_DEAUTHORIZE)->EnableWindow(FALSE);
+        MessageBox(_T("取消授权成功！"));
     }
 }
 

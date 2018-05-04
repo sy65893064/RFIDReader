@@ -35,6 +35,7 @@ void CDlgUser::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDlgUser, CDialog)
     ON_WM_PAINT()
     ON_WM_TIMER()
+    ON_WM_SHOWWINDOW()
 END_MESSAGE_MAP()
 
 
@@ -84,4 +85,18 @@ void CDlgUser::OnTimer(UINT_PTR nIDEvent)
     }
 
     CDialog::OnTimer(nIDEvent);
+}
+
+
+void CDlgUser::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+    CDialog::OnShowWindow(bShow, nStatus);
+    if (bShow)
+    {
+        m_strCardNum = _T("");
+        m_strAuth = _T("");
+        UpdateData(FALSE);
+    }
+
+    // TODO: 在此处添加消息处理程序代码
 }

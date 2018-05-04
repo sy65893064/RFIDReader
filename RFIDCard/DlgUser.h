@@ -28,6 +28,6 @@ public:
     afx_msg void OnPaint();
     afx_msg void OnTimer(UINT_PTR nIDEvent);
     CString m_strCardNum;
-    CStatic m_picCtrl;
     CString m_strAuth;
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
 };
